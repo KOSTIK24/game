@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import { getDatabase, ref, set, onValue, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 // === 🔥 Firebase konfigurace ===
 const firebaseConfig = {
@@ -13,13 +13,13 @@ const firebaseConfig = {
   measurementId: "G-F76JV1NDET"
 };
 
-// === Inicializace ===
+// === Inicializace Firebase ===
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
-// === Obrázky ===
+// === Načtení obrázků ===
 const playerImg = new Image();
 playerImg.src = "images/player.png";
 
@@ -36,27 +36,26 @@ if (!nickname) {
 let cookies = 0;
 let x = Math.random() * 700;
 let y = Math.random() * 500;
+let speed = 8;
 
-// === Sušenka (společná pro všechny hráče) ===
+// === Sušenka (globální pozice) ===
 let cookie = { x: 400, y: 300 };
 
-// === Ovládání ===
+// === Pohyb ===
 document.addEventListener("keydown", (e) => {
-  if (e.key === "w") y -= 10;
-  if (e.key === "s") y += 10;
-  if (e.key === "a") x -= 10;
-  if (e.key === "d") x += 10;
+  if (e.key === "w") y -= speed;
+  if (e.key === "s") y += speed;
+  if (e.key === "a") x -= speed;
+  if (e.key === "d") x += speed;
 
-  // Okraje mapy
-  if (x < 0) x = 0;
-  if (y < 0) y = 0;
-  if (x > canvas.width - 32) x = canvas.width - 32;
-  if (y > canvas.height - 32) y = canvas.height - 32;
+  // Omez pohyb na hranice
+  x = Math.max(0, Math.min(canvas.width - 32, x));
+  y = Math.max(0, Math.min(canvas.height - 32, y));
 
   updatePlayer();
 });
 
-// === Uložení pozice do Firebase ===
+// === Uložení pozice do databáze ===
 function updatePlayer() {
   set(ref(db, "players/" + nickname), {
     x,
@@ -65,37 +64,38 @@ function updatePlayer() {
   });
 }
 
-// === Hlavní smyčka hry ===
+// === Vykreslování ===
 function draw(players) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // Sušenka
+  // 🍪 sušenka
   ctx.drawImage(cookieImg, cookie.x, cookie.y, 48, 48);
 
-  // Hráči
+  // 👥 hráči
   for (const name in players) {
     const p = players[name];
     if (!p) continue;
 
-    // Aktuální hráč = modrý obrys
     if (name === nickname) {
-      ctx.strokeStyle = "blue";
-      ctx.lineWidth = 3;
-      ctx.strokeRect(p.x - 2, p.y - 2, 36, 36);
+      // TY – plný barevný player.png
+      ctx.drawImage(playerImg, p.x, p.y, 48, 48);
+      ctx.font = "18px Comic Sans MS";
+      ctx.fillStyle = "#2b1908";
+      ctx.fillText(name + " (ty)", p.x - 10, p.y - 5);
+    } else {
+      // Ostatní – šedý odstín
+      ctx.globalAlpha = 0.6;
+      ctx.drawImage(playerImg, p.x, p.y, 48, 48);
+      ctx.globalAlpha = 1.0;
+      ctx.font = "16px Comic Sans MS";
+      ctx.fillStyle = "#4a2b0f";
+      ctx.fillText(name, p.x, p.y - 5);
     }
-
-    ctx.drawImage(playerImg, p.x, p.y, 32, 32);
-
-    // Jméno hráče
-    ctx.font = "16px Comic Sans MS";
-    ctx.fillStyle = "#4a2b0f";
-    ctx.fillText(name, p.x, p.y - 5);
   }
 
-  // Kolize se sušenkou
-  const playerRect = { x, y, w: 32, h: 32 };
+  // 🎯 kolize se sušenkou
+  const playerRect = { x, y, w: 48, h: 48 };
   const cookieRect = { x: cookie.x, y: cookie.y, w: 48, h: 48 };
-
   if (
     playerRect.x < cookieRect.x + cookieRect.w &&
     playerRect.x + playerRect.w > cookieRect.x &&
@@ -109,13 +109,13 @@ function draw(players) {
     updatePlayer();
   }
 
-  // Počet sušenek
-  ctx.font = "24px Comic Sans MS";
+  // 🍪 Počet sušenek
+  ctx.font = "26px Comic Sans MS";
   ctx.fillStyle = "#5c3317";
   ctx.fillText("🍪 " + cookies, 20, 40);
 }
 
-// === Firebase synchronizace ===
+// === Firebase realtime ===
 onValue(ref(db, "players"), (snapshot) => {
   const players = snapshot.val() || {};
   draw(players);
@@ -126,7 +126,7 @@ onValue(ref(db, "cookie"), (snapshot) => {
   if (c) cookie = c;
 });
 
-// === Po zavření okna smaž hráče ===
+// === Odstranit hráče po odchodu ===
 window.addEventListener("beforeunload", () => {
-  set(ref(db, "players/" + nickname), null);
+  remove(ref(db, "players/" + nickname));
 });
