@@ -15,7 +15,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-const ADMIN_PASS = "admin123"; // TODO: změň si heslo
+const ADMIN_PASS = "susagame5"; // TODO: změň si heslo
 
 window.login = function() {
   const pass = document.getElementById("adminPass").value;
