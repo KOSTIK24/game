@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🛠️ Sušenková Konzole</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <h1>🛠️ Admin Konzole</h1>
+  <input type="password" id="adminPass" placeholder="Zadej heslo" />
+  <button onclick="login()">Přihlásit</button>
+  <div id="console" style="display:none;">
+    <h2>Seznam hráčů</h2>
+    <ul id="playersList"></ul>
+    <button onclick="resetAll()">Reset hry</button>
+  </div>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js"></script>
+  <script src="console.js"></script>
+</body>
+</html>
